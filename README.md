@@ -1,2 +1,3 @@
 # ruml
-Generate plantuml code from rust code
+
+Generate plantuml class diagram code from rust source code.
