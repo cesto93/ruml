@@ -25,7 +25,9 @@ impl PlantUml for Entity {
         let prefix = match self.entity_type {
             EntityType::Struct => format!("class \"{}\" {{\n", self.name),
             EntityType::Enum => format!("enum \"{}\" {{\n", self.name),
+            EntityType::Trait => format!("interface \"{}\" {{\n", self.name),
             EntityType::Field(ref name) => format!("    + {}: {}\n", name, self.name),
+            EntityType::Method => format!("    + {}\n", self.name),
         };
 
         let body: Vec<String> = self
@@ -66,6 +68,8 @@ pub enum EntityType {
     Struct,
     Enum,
     Field(String),
+    Trait,
+    Method,
 }
 
 fn make_dependencies(type_name: &str) -> HashSet<String> {

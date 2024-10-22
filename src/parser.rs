@@ -1,4 +1,5 @@
-use quote::quote;
+use quote::{quote, ToTokens};
+use syn::{ReturnType, TraitItem};
 
 use super::{Entity, EntityType};
 
@@ -7,13 +8,56 @@ pub fn file_parser(file: syn::File) -> Vec<Entity> {
     for item in file.items {
         match item {
             syn::Item::Enum(_item) => (),
-            syn::Item::Struct(item) => {
-                entities.push(struct_parser(item));
-            }
+            syn::Item::Struct(item) => entities.push(struct_parser(item)),
+            syn::Item::Trait(item) => entities.push(trait_parser(item)),
             _ => (),
         }
     }
     entities
+}
+
+fn trait_parser(item: syn::ItemTrait) -> Entity {
+    let name = item.ident.to_string();
+    let mut methods: Vec<Entity> = vec![];
+
+    for item in &item.items {
+        if let TraitItem::Method(method) = item {
+            let method_name = &method.sig.ident;
+            let mut params: Vec<String> = vec![];
+
+            // Extract input parameters
+            for input in &method.sig.inputs {
+                match input {
+                    syn::FnArg::Receiver(_) => (),
+                    syn::FnArg::Typed(pat_type) => {
+                        // Get parameter name and type
+                        if let syn::Pat::Ident(ident) = &*pat_type.pat {
+                            params.push(format!("{} {}", ident.ident, pat_type.ty.to_token_stream().to_string()));
+                        }
+                    }
+                }
+            }
+
+            // Handle the return type
+            let ret = match &method.sig.output {
+                ReturnType::Default => "".to_string(),
+                ReturnType::Type(_, ty) => format!("{}", ty.to_token_stream().to_string()),
+            };
+
+            let method = format!("{}({}) {}", method_name, params.join(","), ret);
+
+            methods.push(Entity {
+                entity_type: EntityType::Field("".to_owned()),
+                name: method,
+                fields: vec![],
+            });
+        }
+    }
+    Entity {
+        entity_type: EntityType::Trait,
+        name,
+        fields: methods,
+    }
 }
 
 fn struct_parser(item: syn::ItemStruct) -> Entity {
